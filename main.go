@@ -11,27 +11,48 @@ type User struct {
 	Age  string `json:"age"`
 }
 
+type UserResponse struct {
+	Message string `json:"message"`
+	Data    User   `json:"data"`
+}
+
 func greet(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello, World!")
 }
 
+var users []User
+
 func user(w http.ResponseWriter, r *http.Request) {
-	u := User{
-		Name: r.URL.Query().Get("name"),
-		Age:  r.URL.Query().Get("age"),
-	}
-	if u.Name == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "Name is required!")
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
+	var user User
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Invalid JSON")
+		return
+	}
+	if user.Name == "" || user.Age == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Name or Age(or both) is incorrect")
+		return
+	}
+	users = append(users, user)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(u)
+	w.WriteHeader(http.StatusCreated)
+	response := UserResponse{
+		Message: "User Created",
+		Data:    user,
+	}
+	json.NewEncoder(w).Encode(response)
 }
 
 func main() {
 	http.HandleFunc("/", greet)
 	http.HandleFunc("/user", user)
 	http.ListenAndServe(":8080", nil)
+
 }
