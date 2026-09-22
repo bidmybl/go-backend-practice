@@ -8,7 +8,7 @@ import (
 
 type User struct {
 	Name string `json:"name"`
-	Age  string `json:"age"`
+	Age  int    `json:"age"`
 }
 
 type UserResponse struct {
@@ -16,8 +16,18 @@ type UserResponse struct {
 	Data    User   `json:"data"`
 }
 
+type ErrorResponse struct {
+	Message string `json:"message"`
+}
+
+func writeJSON(w http.ResponseWriter, status int, data any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
 func greet(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello, World!")
+	fmt.Fprintln(w, "Hello, World!")
 }
 
 var users []User
@@ -26,36 +36,56 @@ func user(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		var user User
+
 		err := json.NewDecoder(r.Body).Decode(&user)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, "Invalid JSON")
+			writeJSON(w, http.StatusBadRequest, ErrorResponse{
+				Message: "invalid JSON",
+			})
 			return
 		}
-		if user.Name == "" || user.Age == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, "Name or Age(or both) is incorrect")
+
+		if user.Name == "" || user.Age <= 0 {
+			writeJSON(w, http.StatusBadRequest, ErrorResponse{
+				Message: "name or age is incorrect",
+			})
 			return
 		}
+
 		users = append(users, user)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
+
 		response := UserResponse{
 			Message: "User Created",
 			Data:    user,
 		}
-		json.NewEncoder(w).Encode(response)
+
+		writeJSON(w, http.StatusCreated, response)
+
 	case http.MethodGet:
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(users)
+		if filterName := r.URL.Query().Get("name"); filterName != "" {
+			var answer []User
+
+			for _, filteredUser := range users {
+				if filteredUser.Name == filterName {
+					answer = append(answer, filteredUser)
+				}
+			}
+
+			writeJSON(w, http.StatusOK, answer)
+		} else {
+			writeJSON(w, http.StatusOK, users)
+		}
+
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		writeJSON(w, http.StatusMethodNotAllowed, ErrorResponse{
+			Message: "method not allowed",
+		})
 	}
 }
 
 func main() {
 	http.HandleFunc("/", greet)
 	http.HandleFunc("/user", user)
-	http.ListenAndServe(":8080", nil)
 
+	http.ListenAndServe(":8080", nil)
 }
