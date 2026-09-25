@@ -2,19 +2,21 @@ package handler
 
 import (
 	"encoding/json"
-	"net/http"
 	"fmt"
 	"github.com/bidmybl/go-backend-practice/internal/model"
 	"github.com/bidmybl/go-backend-practice/internal/response"
+	"net/http"
 )
 
-var users []model.User
+type UserHandler struct {
+	users []model.User
+}
 
 func Greet(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Hello, World!")
 }
 
-func UsersHandler(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) Users(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		var user model.User
@@ -34,7 +36,7 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		users = append(users, user)
+		h.users = append(h.users, user)
 
 		userResponse := model.UserResponse{
 			Message: "User Created",
@@ -47,7 +49,7 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 		if filterName := r.URL.Query().Get("name"); filterName != "" {
 			var answer []model.User
 
-			for _, filteredUser := range users {
+			for _, filteredUser := range h.users {
 				if filteredUser.Name == filterName {
 					answer = append(answer, filteredUser)
 				}
@@ -55,7 +57,7 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 
 			response.WriteJSON(w, http.StatusOK, answer)
 		} else {
-			response.WriteJSON(w, http.StatusOK, users)
+			response.WriteJSON(w, http.StatusOK, h.users)
 		}
 
 	default:
