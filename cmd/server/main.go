@@ -2,15 +2,17 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"github.com/bidmybl/go-backend-practice/internal/handler"
+	"net/http"
 )
 
 func main() {
 	mux := http.NewServeMux()
 
+	userHandler := handler.UserHandler{}
+
 	mux.HandleFunc("/", handler.Greet)
-	mux.HandleFunc("/users", handler.UsersHandler)
+	mux.HandleFunc("/users", userHandler.Users)
 
 	server := http.Server{
 		Addr:    ":8080",
