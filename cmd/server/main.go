@@ -3,13 +3,17 @@ package main
 import (
 	"fmt"
 	"github.com/bidmybl/go-backend-practice/internal/handler"
+	"github.com/bidmybl/go-backend-practice/internal/service"
 	"net/http"
 )
 
 func main() {
 	mux := http.NewServeMux()
 
-	userHandler := handler.UserHandler{}
+	userService := service.UserService{}
+	userHandler := handler.UserHandler{
+		Service: &userService,
+	}
 
 	mux.HandleFunc("/", handler.Greet)
 	mux.HandleFunc("/users", userHandler.Users)

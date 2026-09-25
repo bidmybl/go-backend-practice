@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"github.com/bidmybl/go-backend-practice/internal/model"
 	"github.com/bidmybl/go-backend-practice/internal/response"
+	"github.com/bidmybl/go-backend-practice/internal/service"
 	"net/http"
 )
 
 type UserHandler struct {
-	users []model.User
+	Service *service.UserService
 }
 
 func Greet(w http.ResponseWriter, r *http.Request) {
@@ -29,36 +30,24 @@ func (h *UserHandler) Users(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if user.Name == "" || user.Age <= 0 {
+		err = h.Service.CreateUser(user)
+		if err != nil {
 			response.WriteJSON(w, http.StatusBadRequest, model.ErrorResponse{
-				Message: "name or age is incorrect",
+				Message: err.Error(),
 			})
 			return
 		}
-
-		h.users = append(h.users, user)
 
 		userResponse := model.UserResponse{
 			Message: "User Created",
 			Data:    user,
 		}
-
 		response.WriteJSON(w, http.StatusCreated, userResponse)
 
 	case http.MethodGet:
-		if filterName := r.URL.Query().Get("name"); filterName != "" {
-			var answer []model.User
-
-			for _, filteredUser := range h.users {
-				if filteredUser.Name == filterName {
-					answer = append(answer, filteredUser)
-				}
-			}
-
-			response.WriteJSON(w, http.StatusOK, answer)
-		} else {
-			response.WriteJSON(w, http.StatusOK, h.users)
-		}
+		filterName := r.URL.Query().Get("name")
+		users := h.Service.GetUsers(filterName)
+		response.WriteJSON(w, http.StatusOK, users)
 
 	default:
 		response.WriteJSON(w, http.StatusMethodNotAllowed, model.ErrorResponse{
