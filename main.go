@@ -32,7 +32,7 @@ func greet(w http.ResponseWriter, r *http.Request) {
 
 var users []User
 
-func user(w http.ResponseWriter, r *http.Request) {
+func usersHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		var user User
@@ -84,8 +84,20 @@ func user(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/", greet)
-	http.HandleFunc("/user", user)
+	mux := http.NewServeMux()
 
-	http.ListenAndServe(":8080", nil)
+	mux.HandleFunc("/", greet)
+	mux.HandleFunc("/users", usersHandler)
+
+	server := http.Server{
+		Addr:    ":8080",
+		Handler: mux,
+	}
+
+	fmt.Println("Server started on", server.Addr)
+
+	err := server.ListenAndServe()
+	if err != nil {
+		fmt.Println(err)
+	}
 }
