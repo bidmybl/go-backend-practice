@@ -2,19 +2,18 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
+	"net/http"
+	"strconv"
+	"strings"
+
 	"github.com/bidmybl/go-backend-practice/internal/model"
 	"github.com/bidmybl/go-backend-practice/internal/response"
 	"github.com/bidmybl/go-backend-practice/internal/service"
-	"net/http"
 )
 
 type UserHandler struct {
 	Service *service.UserService
-}
-
-func Greet(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Hello, World!")
 }
 
 func (h *UserHandler) Users(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +45,12 @@ func (h *UserHandler) Users(w http.ResponseWriter, r *http.Request) {
 
 	case http.MethodGet:
 		filterName := r.URL.Query().Get("name")
-		users := h.Service.GetUsers(filterName)
+		if filterName != "" {
+			users := h.Service.GetUsersByName(filterName)
+			response.WriteJSON(w, http.StatusOK, users)
+			return
+		}
+		users := h.Service.GetUsers()
 		response.WriteJSON(w, http.StatusOK, users)
 
 	default:
@@ -54,4 +58,27 @@ func (h *UserHandler) Users(w http.ResponseWriter, r *http.Request) {
 			Message: "method not allowed",
 		})
 	}
+}
+
+func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/users/")
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		response.WriteJSON(w, http.StatusBadRequest, model.ErrorResponse{
+			Message: "invalid user id",
+		})
+		return
+	}
+	user, err := h.Service.GetUserByID(id)
+	if err != nil {
+		if errors.Is(err, service.ErrUserNotFound) {
+			response.WriteJSON(w, http.StatusBadRequest, model.ErrorResponse{
+				Message: "user not found",
+			})
+			return
+		}
+	}
+
+	response.WriteJSON(w, http.StatusOK, user)
 }

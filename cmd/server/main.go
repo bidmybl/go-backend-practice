@@ -10,13 +10,13 @@ import (
 func main() {
 	mux := http.NewServeMux()
 
-	userService := service.UserService{}
+	userService := service.NewUserService()
 	userHandler := handler.UserHandler{
-		Service: &userService,
+		Service: userService,
 	}
 
-	mux.HandleFunc("/", handler.Greet)
 	mux.HandleFunc("/users", userHandler.Users)
+	mux.HandleFunc("/users/", userHandler.GetUser)
 
 	server := http.Server{
 		Addr:    ":8080",
